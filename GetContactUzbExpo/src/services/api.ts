@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000';
+export const API_BASE_URL = 'http://192.168.233.198:4000';
 
 interface ApiResponse<T> {
   data?: T;

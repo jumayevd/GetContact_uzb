@@ -11,7 +11,7 @@ import {
   SafeAreaView,
   RefreshControl,
 } from 'react-native';
-import Contacts from 'react-native-contacts';
+import { API_BASE_URL } from '../services/api';
 
 interface ContactResult {
   name: string;
@@ -38,7 +38,7 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
 
   const checkContactsStatus = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/contacts/my-contacts', {
+      const response = await fetch(`${API_BASE_URL}/api/contacts/my-contacts`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -69,7 +69,7 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/contacts/search', {
+      const response = await fetch(`${API_BASE_URL}/api/contacts/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,41 +98,47 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
   const uploadContacts = async () => {
     setUploadingContacts(true);
     try {
-      const contacts = await Contacts.getAll();
-      const formattedContacts = contacts
-        .filter(contact => contact.phoneNumbers && contact.phoneNumbers.length > 0)
-        .map(contact => ({
-          name: contact.displayName || 'Unknown',
-          phone: contact.phoneNumbers[0].number.replace(/\s/g, ''),
-        }))
-        .slice(0, 1000); // Limit to 1000 contacts
+      // The original code used react-native-contacts, which is removed.
+      // This function will now be a placeholder or need to be re-implemented
+      // using a different library or native modules if contact access is required.
+      // For now, we'll just show an alert.
+      Alert.alert('Contacts Upload', 'Contact upload functionality is currently disabled.');
+      // Example of how it might look if using a different library:
+      // const contacts = await ExpoContacts.getAll();
+      // const formattedContacts = contacts
+      //   .filter(contact => contact.phoneNumbers && contact.phoneNumbers.length > 0)
+      //   .map(contact => ({
+      //     name: contact.displayName || 'Unknown',
+      //     phone: contact.phoneNumbers[0].number.replace(/\s/g, ''),
+      //   }))
+      //   .slice(0, 1000); // Limit to 1000 contacts
 
-      if (formattedContacts.length === 0) {
-        Alert.alert('No Contacts', 'No contacts found on your device');
-        return;
-      }
+      // if (formattedContacts.length === 0) {
+      //   Alert.alert('No Contacts', 'No contacts found on your device');
+      //   return;
+      // }
 
-      const response = await fetch('http://localhost:5000/api/contacts/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ contacts: formattedContacts }),
-      });
+      // const response = await fetch(`${API_BASE_URL}/api/contacts/upload`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${token}`,
+      //   },
+      //   body: JSON.stringify({ contacts: formattedContacts }),
+      // });
 
-      const data = await response.json();
+      // const data = await response.json();
 
-      if (response.ok) {
-        setContactsUploaded(true);
-        Alert.alert(
-          'Success',
-          `Successfully uploaded ${formattedContacts.length} contacts!`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert('Error', data.error || 'Failed to upload contacts');
-      }
+      // if (response.ok) {
+      //   setContactsUploaded(true);
+      //   Alert.alert(
+      //     'Success',
+      //     `Successfully uploaded ${formattedContacts.length} contacts!`,
+      //     [{ text: 'OK' }]
+      //   );
+      // } else {
+      //   Alert.alert('Error', data.error || 'Failed to upload contacts');
+      // }
     } catch (error) {
       Alert.alert('Error', 'Failed to access contacts. Please check permissions.');
     } finally {

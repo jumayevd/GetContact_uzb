@@ -1,7 +1,7 @@
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import AppNavigator from './src/navigation/AppNavigator';
+import AppNavigator from '../../../GetContactUzbExpo/src/navigation/AppNavigator';
 
 const App = () => {
   return (

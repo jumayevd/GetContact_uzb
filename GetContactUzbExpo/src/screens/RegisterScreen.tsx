@@ -10,40 +10,54 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { API_BASE_URL } from '../services/api';
 
-interface LoginScreenProps {
+interface RegisterScreenProps {
   navigation: any;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!phone || !password) {
+  const handleRegister = async () => {
+    if (!phone || !password || !name) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone, password }),
+        body: JSON.stringify({ phone, password, name }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Store token and navigate to main app
-        // In a real app, you'd use AsyncStorage or secure storage
-        navigation.replace('MainApp', { token: data.token, user: data.user });
+        Alert.alert(
+          'Success',
+          'Account created successfully! Please sign in.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Login'),
+            },
+          ]
+        );
       } else {
-        Alert.alert('Error', data.error || 'Login failed');
+        Alert.alert('Error', data.error || 'Registration failed');
       }
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again.');
@@ -58,10 +72,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>GetContact Uzb</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Join GetContact Uzb</Text>
 
         <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+
           <TextInput
             style={styles.input}
             placeholder="Phone Number (+998...)"
@@ -73,7 +95,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder="Password (min 6 characters)"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -82,21 +104,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={handleRegister}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
+              <Text style={styles.buttonText}>Create Account</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => navigation.navigate('Login')}
           >
-            <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+            <Text style={styles.linkText}>Already have an account? Sign in</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -173,4 +195,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen; 
+export default RegisterScreen; 
