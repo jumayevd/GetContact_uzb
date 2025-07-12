@@ -104,21 +104,6 @@ GetContact_uzb/
 │   ├── test-api.js             # API testing script
 │   ├── package.json            # Backend dependencies
 │   └── README.md               # Backend documentation
-├── mobile/                     # Complete React Native mobile app
-│   └── GetContactUzb/
-│       ├── src/
-│       │   ├── navigation/
-│       │   │   └── AppNavigator.tsx  # App navigation
-│       │   ├── screens/
-│       │   │   ├── LoginScreen.tsx   # User login
-│       │   │   ├── RegisterScreen.tsx # User registration
-│       │   │   ├── ContactPermissionScreen.tsx # Permission request
-│       │   │   └── MainAppScreen.tsx # Main app interface
-│       │   └── services/
-│       │       └── api.ts      # API service layer
-│       ├── App.tsx             # Main app component
-│       ├── package.json        # Mobile dependencies
-│       └── README.md           # Mobile documentation
 ├── README.md                   # Main project documentation
 └── PROJECT_COMPLETION.md       # This file
 ```
@@ -128,18 +113,10 @@ GetContact_uzb/
 ### 1. Backend Setup
 
 ```bash
-cd backend
+
 
 # Install dependencies
-npm install
-
-# Set up environment (optional for development)
-npm run deploy
-
-# Start the server
-npm run dev  # Development mode
-npm start    # Production mode
-```
+node index.js
 
 ### 2. Mobile App Setup
 
@@ -156,21 +133,12 @@ npm install react-native-contacts react-native-permissions @react-navigation/nat
 cd ios && pod install && cd ..
 
 # Start the app
-npx react-native run-android  # or run-ios for iOS
-```
+npm install --save-dev @types/jsonwebtoken
 
-### 3. Testing
-
-```bash
-# Test backend API
-cd backend
-npm test
-
-# Test database connection
-npm run init-db
-```
 
 ## 🔧 Production Deployment
+
+./gradlew assembleRelease
 
 ### Backend Deployment
 
@@ -312,6 +280,6 @@ The project can be deployed to production and used by real users with confidence
 
 ---
 
-**Last Updated**: December 2024
+**Last Updated**: July 2025
 **Project Status**: ✅ COMPLETED
 **Production Ready**: ✅ YES 

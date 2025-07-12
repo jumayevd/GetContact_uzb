@@ -43,7 +43,7 @@ module.exports = {
   
   // API Configuration
   api: {
-    baseUrl: process.env.API_BASE_URL || 'http://localhost:5000',
+    baseUrl: process.env.API_BASE_URL || 'http://192.168.219.192:4000',
     version: '1.0.0',
   },
 }; 

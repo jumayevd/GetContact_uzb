@@ -40,14 +40,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token and navigate to main app
-        // In a real app, you'd use AsyncStorage or secure storage
-        navigation.replace('MainApp', { token: data.token, user: data.user });
+        // ✅ Navigate to contact permission screen
+        navigation.replace('ContactPermission', {
+          token: data.token,
+          user: data.user,
+        });
       } else {
-        Alert.alert('Error', data.error || 'Login failed');
+        Alert.alert('Login Failed', data.error || 'Invalid credentials');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Network Error', error.message || 'Unable to login.');
     } finally {
       setLoading(false);
     }
@@ -66,19 +69,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Phone Number (+998...)"
+            placeholderTextColor="#999"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
             autoCapitalize="none"
+            selectionColor="#007AFF"
           />
 
           <TextInput
             style={styles.input}
             placeholder="Password"
+            placeholderTextColor="#999"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             autoCapitalize="none"
+            selectionColor="#007AFF"
           />
 
           <TouchableOpacity
@@ -133,21 +140,20 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
+  borderWidth: 1,
+  borderColor: '#ddd',
+  borderRadius: 8,
+  padding: 15,
+  marginBottom: 15,
+  fontSize: 16,
+  backgroundColor: '#fff',
+  color: '#333', // ← ADD THIS - makes text visible
   },
   button: {
     backgroundColor: '#007AFF',
@@ -174,4 +180,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen; 
+export default LoginScreen;

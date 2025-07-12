@@ -79,27 +79,33 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Full Name"
+            placeholderTextColor="#999"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
+            selectionColor="#007AFF"
           />
 
           <TextInput
             style={styles.input}
             placeholder="Phone Number (+998...)"
+            placeholderTextColor="#999"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
             autoCapitalize="none"
+            selectionColor="#007AFF"
           />
 
           <TextInput
             style={styles.input}
             placeholder="Password (min 6 characters)"
+            placeholderTextColor="#999"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             autoCapitalize="none"
+            selectionColor="#007AFF"
           />
 
           <TouchableOpacity
@@ -169,6 +175,8 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
+    backgroundColor: '#fff',
+    color: '#333', // ← ADD THIS - makes text visible
   },
   button: {
     backgroundColor: '#007AFF',

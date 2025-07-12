@@ -14,63 +14,97 @@ interface ContactPermissionScreenProps {
   route: any;
 }
 
-const ContactPermissionScreen: React.FC<ContactPermissionScreenProps> = ({ navigation, route }) => {
-  const { token, user } = route.params;
-  const [loading, setLoading] = useState(false);
+const ContactPermissionScreen: React.FC<ContactPermissionScreenProps> = ({
+  navigation,
+  route,
+}) => {
+  const { token, user } = route.params || {};
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    requestAndUploadContacts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (token && user) {
+      requestAndUploadContacts();
+    } else {
+      Alert.alert('Missing Info', 'Token or user data missing');
+      navigation.goBack();
+    }
   }, []);
 
   const requestAndUploadContacts = async () => {
-    setLoading(true);
     try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status === 'granted') {
-        const { data: contacts } = await Contacts.getContactsAsync({
-          fields: [Contacts.Fields.PhoneNumbers],
-        });
-        const formattedContacts = (contacts || [])
-          .filter(c => c.phoneNumbers && c.phoneNumbers.length > 0)
-          .map(c => ({
-            name: c.name || 'Unknown',
-            phone: c.phoneNumbers[0].number.replace(/\s/g, ''),
-          }))
-          .slice(0, 1000);
-        if (formattedContacts.length > 0) {
-          await fetch(`${API_BASE_URL}/api/contacts/upload`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ contacts: formattedContacts }),
-          });
-        }
-        navigation.replace('MainApp', { token, user });
-      } else {
-        Alert.alert('Permission required', 'Contact access is needed for full functionality.');
+      console.log('[Permission] Checking existing permissions...');
+      const { status: existingStatus } = await Contacts.getPermissionsAsync();
+
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        console.log('[Permission] Requesting permission...');
+        const { status: requestedStatus } = await Contacts.requestPermissionsAsync();
+        finalStatus = requestedStatus;
       }
+
+      if (finalStatus !== 'granted') {
+        console.warn('[Permission] Permission not granted.');
+        Alert.alert(
+          'Permission Required',
+          'We need access to your contacts to continue.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        return;
+      }
+
+      console.log('[Contacts] Fetching contacts...');
+      const { data: contacts } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers],
+      });
+
+      const formattedContacts = (contacts || [])
+        .filter(c => c.phoneNumbers && c.phoneNumbers.length > 0)
+        .map(c => {
+          const phone = c.phoneNumbers![0].number?.replace(/\s/g, '') || '';
+          const name = c.name?.trim() || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown';
+          return { name, phone };
+        })
+        .filter(c => c.phone.length > 0)
+        .slice(0, 1000);
+
+      console.log(`[Upload] Found ${formattedContacts.length} contacts to upload`);
+
+      if (formattedContacts.length > 0) {
+        const response = await fetch(`${API_BASE_URL}/api/contacts/upload`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ contacts: formattedContacts }),
+        });
+
+        const result = await response.json();
+        console.log('[Upload] Response:', result);
+      }
+
+      console.log('[Navigation] Navigating to MainApp...');
+      navigation.replace('MainApp', { token, user });
+
     } catch (error) {
-      Alert.alert('Error', 'Failed to upload contacts');
+      console.error('[Error] Contact permission or upload error:', error);
+      Alert.alert('Error', 'Something went wrong while accessing contacts.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Uploading contacts...</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <Text style={styles.loadingText}>Preparing to upload contacts...</Text>
+      {loading ? (
+        <>
+          <ActivityIndicator size="large" />
+          <Text style={styles.loadingText}>Uploading contacts...</Text>
+        </>
+      ) : (
+        <Text style={styles.loadingText}>Done</Text>
+      )}
     </View>
   );
 };
@@ -86,7 +120,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
     color: '#333',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 });
 
-export default ContactPermissionScreen; 
+export default ContactPermissionScreen;

@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://192.168.233.198:4000';
+export const API_BASE_URL = 'https://0c1e9748ae2a.ngrok-free.app';
 
 interface ApiResponse<T> {
   data?: T;

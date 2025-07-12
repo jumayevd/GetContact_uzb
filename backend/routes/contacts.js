@@ -1,35 +1,50 @@
 const express = require('express');
+const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-const { validateContactSearch, validateContactsUpload } = require('../middleware/validation');
-const router = express.Router();
+const pool = require('../config/database');
+const {
+  validateContactSearch,
+  validateContactsUpload
+} = require('../middleware/validation');
 
-// Upload user contacts (requires authentication)
+// Upload contacts for a user
 router.post('/upload', auth, validateContactsUpload, async (req, res) => {
+  console.log('📱 Contact upload started');
+  console.log('User ID:', req.user.id);
+  console.log('Contacts count:', req.body.contacts?.length);
+  
   try {
-    const { contacts: newContacts } = req.body;
+    const { contacts } = req.body;
     const userId = req.user.id;
 
-    // Upload contacts using User model
-    await User.uploadContacts(userId, newContacts);
+    console.log('📋 Sample contacts:', contacts.slice(0, 3));
 
+    await User.uploadContacts(userId, contacts);
+
+    console.log('✅ Contacts uploaded successfully');
     res.json({
       message: 'Contacts uploaded successfully',
-      count: newContacts.length
+      count: contacts.length
     });
   } catch (error) {
-    console.error('Contact upload error:', error);
-    res.status(500).json({ error: 'Failed to upload contacts' });
+    console.error('❌ Upload contacts error:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
-// Search for contact names by phone number (requires authentication)
+// Search contacts - FIXED: removed duplicate route
 router.post('/search', auth, validateContactSearch, async (req, res) => {
+  console.log('🔍 Contact search started');
+  console.log('Search params:', req.body);
+  console.log('User:', req.user);
+  
   try {
-    const { phoneNumber } = req.body;
+    const { phoneNumber, myPhone } = req.body;
 
-    // Search for contact names using User model
-    const results = await User.searchContact(phoneNumber);
+    const results = await User.searchContact(phoneNumber, myPhone);
+    
+    console.log('🎯 Search results:', results);
 
     res.json({
       phoneNumber,
@@ -37,91 +52,55 @@ router.post('/search', auth, validateContactSearch, async (req, res) => {
       totalResults: results.length
     });
   } catch (error) {
-    console.error('Contact search error:', error);
+    console.error('❌ Contact search error:', error);
     res.status(500).json({ error: 'Failed to search contacts' });
   }
 });
 
-// Get user's own contacts (requires authentication)
+// Get the authenticated user's uploaded contacts
 router.get('/my-contacts', auth, async (req, res) => {
+  console.log('📱 Getting user contacts for:', req.user.id);
+  
   try {
     const userId = req.user.id;
-    
-    const pool = require('../config/database');
+
     const result = await pool.query(
       'SELECT contact_name, contact_phone, created_at FROM contacts WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
-    
-    const userContacts = result.rows;
-    
+
+    console.log('📊 Found contacts:', result.rows.length);
+
     res.json({
-      contacts: userContacts,
-      count: userContacts.length
+      contacts: result.rows,
+      count: result.rows.length
     });
   } catch (error) {
-    console.error('Get contacts error:', error);
+    console.error('❌ Get contacts error:', error);
     res.status(500).json({ error: 'Failed to get contacts' });
   }
 });
 
-// Get contact statistics (requires authentication)
+// Get stats about user's contact uploads
 router.get('/stats', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    
-    const pool = require('../config/database');
-    
-    // Get total contacts count
-    const totalResult = await pool.query(
-      'SELECT COUNT(*) as total FROM contacts WHERE user_id = $1',
-      [userId]
-    );
-    
-    // Get unique phone numbers count
-    const uniqueResult = await pool.query(
-      'SELECT COUNT(DISTINCT contact_phone) as unique_phones FROM contacts WHERE user_id = $1',
-      [userId]
-    );
-    
-    // Get recent uploads
-    const recentResult = await pool.query(
-      'SELECT created_at FROM contacts WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
-      [userId]
-    );
-    
+
+    const [totalResult, uniqueResult, recentResult] = await Promise.all([
+      pool.query('SELECT COUNT(*) as total FROM contacts WHERE user_id = $1', [userId]),
+      pool.query('SELECT COUNT(DISTINCT contact_phone) as unique_phones FROM contacts WHERE user_id = $1', [userId]),
+      pool.query('SELECT created_at FROM contacts WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1', [userId])
+    ]);
+
     res.json({
       totalContacts: parseInt(totalResult.rows[0].total),
       uniquePhones: parseInt(uniqueResult.rows[0].unique_phones),
       lastUpload: recentResult.rows[0]?.created_at || null
     });
   } catch (error) {
-    console.error('Stats error:', error);
+    console.error('❌ Stats error:', error);
     res.status(500).json({ error: 'Failed to get statistics' });
   }
 });
 
-// Delete user's contacts (requires authentication)
-router.delete('/my-contacts', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    const pool = require('../config/database');
-    const result = await pool.query(
-      'DELETE FROM contacts WHERE user_id = $1 RETURNING COUNT(*) as deleted_count',
-      [userId]
-    );
-    
-    const deletedCount = parseInt(result.rows[0].deleted_count);
-    
-    res.json({
-      message: 'Contacts deleted successfully',
-      deletedCount
-    });
-  } catch (error) {
-    console.error('Delete contacts error:', error);
-    res.status(500).json({ error: 'Failed to delete contacts' });
-  }
-});
-
-module.exports = router; 
+module.exports = router;

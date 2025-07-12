@@ -67,6 +67,7 @@ try {
   app.use('/api/auth', authRoutes);
   app.use('/api/contacts', contactRoutes);
 
+
   // Root endpoint
   app.get('/', (req, res) => {
     res.json({

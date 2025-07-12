@@ -10,7 +10,9 @@ router.post('/register', validateRegistration, async (req, res) => {
 
     // Create new user
     const newUser = await User.create(phone, password, name);
-    const token = User.generateToken(newUser.id);
+    
+    // Fix: Pass both userId and phone to generateToken
+    const token = User.generateToken(newUser.id, newUser.phone);
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -47,8 +49,8 @@ router.post('/login', validateLogin, async (req, res) => {
       return res.status(401).json({ error: 'Invalid phone number or password' });
     }
 
-    // Generate token
-    const token = User.generateToken(user.id);
+    // Fix: Pass both userId and phone to generateToken
+    const token = User.generateToken(user.id, user.phone);
 
     res.json({
       message: 'Login successful',
@@ -76,7 +78,9 @@ router.get('/profile', async (req, res) => {
 
     const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findById(decoded.userId);
+    
+    // Fix: Use 'id' instead of 'userId'
+    const user = await User.findById(decoded.id);
     
     if (!user) {
       return res.status(401).json({ error: 'Invalid token.' });
@@ -96,4 +100,4 @@ router.get('/profile', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

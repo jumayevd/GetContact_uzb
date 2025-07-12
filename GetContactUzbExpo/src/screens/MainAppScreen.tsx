@@ -14,7 +14,7 @@ import {
 import { API_BASE_URL } from '../services/api';
 
 interface ContactResult {
-  name: string;
+  contact_name: string;
   frequency: number;
 }
 
@@ -27,7 +27,6 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ContactResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [uploadingContacts, setUploadingContacts] = useState(false);
   const [contactsUploaded, setContactsUploaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { token, user } = route.params;
@@ -38,16 +37,25 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
 
   const checkContactsStatus = async () => {
     try {
+      console.log('Checking contacts status with token:', token ? 'Present' : 'Missing');
+      
       const response = await fetch(`${API_BASE_URL}/api/contacts/my-contacts`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
+      console.log('Contacts status response:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('Contacts data:', data);
         setContactsUploaded(data.count > 0);
+      } else {
+        const errorData = await response.json();
+        console.error('Contacts status error:', errorData);
       }
     } catch (error) {
       console.error('Failed to check contacts status:', error);
@@ -60,7 +68,6 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
       return;
     }
 
-    // Basic phone number validation
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     if (!phoneRegex.test(searchQuery.trim())) {
       Alert.alert('Error', 'Please enter a valid phone number');
@@ -69,80 +76,86 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
 
     setLoading(true);
     try {
+      // Debug token before sending
+      console.log('=== TOKEN DEBUG ===');
+      console.log('Token present:', token ? 'YES' : 'NO');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('Token payload:', payload);
+          console.log('Token expires:', new Date(payload.exp * 1000));
+          console.log('Token expired?', payload.exp < Date.now() / 1000);
+        } catch (e) {
+          console.log('Token decode error:', e);
+        }
+      }
+      console.log('===================');
+
+      console.log('Searching with params:', {
+        phoneNumber: searchQuery.trim(),
+        myPhone: user.phone,
+        token: token ? 'Present' : 'Missing'
+      });
+
+      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('Full URL:', `${API_BASE_URL}/api/contacts/search`);
+      
       const response = await fetch(`${API_BASE_URL}/api/contacts/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ phoneNumber: searchQuery.trim() }),
+        body: JSON.stringify({
+          phoneNumber: searchQuery.trim(),  // The person you are querying
+          myPhone: user.phone,              // Your own number
+        }),
       });
 
-      const data = await response.json();
+      console.log('Search response status:', response.status);
+      console.log('Search response headers:', response.headers);
+      
+      // Get response as text first to see what we're getting
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        console.error('Response was:', responseText);
+        Alert.alert('Server Error', 'Server returned invalid response. Please check if the server is running.');
+        return;
+      }
+
+      console.log('Parsed response data:', data);
 
       if (response.ok) {
         setSearchResults(data.results || []);
         if (data.results.length === 0) {
-          Alert.alert('No Results', 'No contacts found for this phone number');
+          Alert.alert('No Results', 'No one saved your number with a name');
         }
       } else {
-        Alert.alert('Error', data.error || 'Search failed');
+        console.error('Search error response:', data);
+        console.error('Response status:', response.status);
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (response.status === 401) {
+          console.error('401 UNAUTHORIZED - Token rejected by server');
+          console.error('This means the backend auth middleware is rejecting your token');
+          Alert.alert('Session Expired', 'Please login again', [
+            { text: 'OK', onPress: () => navigation.replace('Login') }
+          ]);
+        } else {
+          Alert.alert('Error', data.error || 'Search failed');
+        }
       }
     } catch (error) {
+      console.error('Search network error:', error);
       Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const uploadContacts = async () => {
-    setUploadingContacts(true);
-    try {
-      // The original code used react-native-contacts, which is removed.
-      // This function will now be a placeholder or need to be re-implemented
-      // using a different library or native modules if contact access is required.
-      // For now, we'll just show an alert.
-      Alert.alert('Contacts Upload', 'Contact upload functionality is currently disabled.');
-      // Example of how it might look if using a different library:
-      // const contacts = await ExpoContacts.getAll();
-      // const formattedContacts = contacts
-      //   .filter(contact => contact.phoneNumbers && contact.phoneNumbers.length > 0)
-      //   .map(contact => ({
-      //     name: contact.displayName || 'Unknown',
-      //     phone: contact.phoneNumbers[0].number.replace(/\s/g, ''),
-      //   }))
-      //   .slice(0, 1000); // Limit to 1000 contacts
-
-      // if (formattedContacts.length === 0) {
-      //   Alert.alert('No Contacts', 'No contacts found on your device');
-      //   return;
-      // }
-
-      // const response = await fetch(`${API_BASE_URL}/api/contacts/upload`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify({ contacts: formattedContacts }),
-      // });
-
-      // const data = await response.json();
-
-      // if (response.ok) {
-      //   setContactsUploaded(true);
-      //   Alert.alert(
-      //     'Success',
-      //     `Successfully uploaded ${formattedContacts.length} contacts!`,
-      //     [{ text: 'OK' }]
-      //   );
-      // } else {
-      //   Alert.alert('Error', data.error || 'Failed to upload contacts');
-      // }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to access contacts. Please check permissions.');
-    } finally {
-      setUploadingContacts(false);
     }
   };
 
@@ -154,12 +167,10 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
 
   const renderContactResult = ({ item }: { item: ContactResult }) => (
     <View style={styles.resultItem}>
-      <View style={styles.resultContent}>
-        <Text style={styles.contactName}>{item.name}</Text>
-        <Text style={styles.frequency}>
-          {item.frequency} {item.frequency === 1 ? 'person' : 'people'} saved this name
-        </Text>
-      </View>
+      <Text style={styles.contactName}>"{item.contact_name}"</Text>
+      <Text style={styles.frequency}>
+        {item.frequency} {item.frequency === 1 ? 'person' : 'people'} saved you as this
+      </Text>
     </View>
   );
 
@@ -168,10 +179,7 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
       'Logout',
       'Are you sure you want to logout?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Logout',
           style: 'destructive',
@@ -198,30 +206,10 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
         }
         ListHeaderComponent={
           <>
-            {!contactsUploaded && (
-              <View style={styles.uploadContainer}>
-                <Text style={styles.uploadTitle}>Upload Your Contacts</Text>
-                <Text style={styles.uploadSubtitle}>
-                  Upload your contacts to help others and improve search results
-                </Text>
-                <TouchableOpacity
-                  style={[styles.uploadButton, uploadingContacts && styles.buttonDisabled]}
-                  onPress={uploadContacts}
-                  disabled={uploadingContacts}
-                >
-                  {uploadingContacts ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.uploadButtonText}>Upload Contacts</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-
             <View style={styles.searchContainer}>
-              <Text style={styles.searchTitle}>Search Phone Number</Text>
+              <Text style={styles.searchTitle}>Who saved me as what?</Text>
               <Text style={styles.searchSubtitle}>
-                Find how others have saved this number in their contacts
+                Enter someone's number to see how they saved your number
               </Text>
 
               <View style={styles.searchBox}>
@@ -250,7 +238,7 @@ const MainAppScreen: React.FC<MainAppScreenProps> = ({ navigation, route }) => {
             {searchResults.length > 0 && (
               <View style={styles.resultsContainer}>
                 <Text style={styles.resultsTitle}>
-                  Results for {searchQuery} ({searchResults.length} found)
+                  How {searchQuery} saved your number:
                 </Text>
                 <FlatList
                   data={searchResults}
@@ -284,6 +272,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -311,13 +300,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     margin: 15,
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
     elevation: 5,
   },
   searchTitle: {
@@ -359,7 +341,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   resultsContainer: {
-    flex: 1,
     marginHorizontal: 15,
     marginBottom: 15,
   },
@@ -374,22 +355,12 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 10,
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
     elevation: 2,
   },
-  resultContent: {
-    flex: 1,
-  },
   contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#007AFF',
     marginBottom: 5,
   },
   frequency: {
@@ -412,44 +383,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 5,
   },
-  uploadContainer: {
-    padding: 20,
-    backgroundColor: '#fff',
-    margin: 15,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    alignItems: 'center',
-  },
-  uploadTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#333',
-  },
-  uploadSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  uploadButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  uploadButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
 });
 
-export default MainAppScreen; 
+export default MainAppScreen;
